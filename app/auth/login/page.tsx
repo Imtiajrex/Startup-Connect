@@ -1,25 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
+import { auth, provider } from "@/lib/firebase";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RocketIcon } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-
-// Demo credentials
-const DEMO_CREDENTIALS = {
-  startup: {
-    email: "startup@demo.com",
-    password: "startup123"
-  },
-  investor: {
-    email: "investor@demo.com",
-    password: "investor123"
-  }
-};
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,20 +19,39 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (email === DEMO_CREDENTIALS.startup.email && password === DEMO_CREDENTIALS.startup.password) {
-      localStorage.setItem("userRole", "startup");
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      // Placeholder: Get user role from Firestore later
+      localStorage.setItem("userRole", "emailUser");
       router.push("/dashboard");
-    } else if (email === DEMO_CREDENTIALS.investor.email && password === DEMO_CREDENTIALS.investor.password) {
-      localStorage.setItem("userRole", "investor");
-      router.push("/dashboard");
-    } else {
-      setError("Invalid credentials. Please try again.");
+    } catch (err: any) {
+      console.error("Email/password login failed:", err.message);
+      setError("Invalid email or password. Please try again.");
     }
   };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Store user info locally
+      localStorage.setItem("userRole", "google");
+      localStorage.setItem("userPhoto", user.photoURL || "");
+      localStorage.setItem("userName", user.displayName || "");
+
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("Google login failed:", err);
+      setError("Google sign-in failed. Please try again.");
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary p-4">
@@ -55,7 +66,23 @@ export default function LoginPage() {
             Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-4">
+          {/* Google login button */}
+          <Button
+            onClick={handleGoogleLogin}
+            variant="outline"
+            className="w-full flex items-center justify-center space-x-2"
+          >
+            <FcGoogle className="text-xl" />
+            <span>Continue with Google</span>
+          </Button>
+
+          <div className="flex items-center justify-center">
+            <span className="text-sm text-muted-foreground">or sign in with email</span>
+          </div>
+
+          {/* Email/password login */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -65,6 +92,7 @@ export default function LoginPage() {
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
@@ -74,14 +102,14 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-500">{error}</p>}
             <Button type="submit" className="w-full">Sign In</Button>
           </form>
 
+          {/* Links */}
           <div className="text-center space-y-2">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{" "}
@@ -96,7 +124,6 @@ export default function LoginPage() {
             </p>
           </div>
         </CardContent>
-
       </Card>
     </div>
   );
