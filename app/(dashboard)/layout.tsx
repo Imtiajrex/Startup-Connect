@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   RocketIcon,
@@ -13,6 +14,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -30,9 +33,17 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [photoURL, setPhotoURL] = useState<string | null>(null);
+
+  useEffect(() => {
+    const photo = localStorage.getItem("userPhoto");
+    if (photo) setPhotoURL(photo);
+  }, []);
+
 
   const handleLogout = () => {
     localStorage.removeItem("userRole");
+    auth.signOut(); // sign out from Firebase
     router.push("/auth/login");
   };
 
@@ -53,11 +64,10 @@ export default function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center space-x-2 rounded-lg px-3 py-2 transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent"
-                  }`}
+                  className={`flex items-center space-x-2 rounded-lg px-3 py-2 transition-colors ${isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-accent"
+                    }`}
                 >
                   <Icon className="h-5 w-5" />
                   <span>{item.name}</span>
@@ -80,8 +90,18 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <div className="pl-72">
-        <main className="py-6">
-          <div className="px-6">{children}</div>
+        <main className="py-6 px-6">
+          {/* Top right avatar */}
+          {photoURL && (
+            <div className="flex justify-end mb-4">
+              <img
+                src={photoURL}
+                alt="User Avatar"
+                className="h-10 w-10 rounded-full border border-gray-300"
+              />
+            </div>
+          )}
+          {children}
         </main>
       </div>
     </div>
